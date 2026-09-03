@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import './App.css'
+import './results.css'
 
 type Category = 'すべて' | '基礎' | '設定' | 'ツール・スキル' | '自動化' | '安全性'
 type Question = { id: number; category: Exclude<Category, 'すべて'>; level: string; question: string; choices: string[]; answer: number; explanation: string; tip: string }
@@ -26,7 +27,9 @@ function App() {
   const [mode, setMode] = useState<'dashboard' | 'quiz' | 'review'>('dashboard')
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
+  const [showResults, setShowResults] = useState(false)
   const [answers, setAnswers] = useState<Record<number, number>>(() => JSON.parse(localStorage.getItem('hermes-quiz-answers') ?? '{}'))
+  const [sessionStats, setSessionStats] = useState<{ correct: number; total: number } | null>(null)
   const pool = useMemo(() => questions.filter(q => category === 'すべて' || q.category === category), [category])
   const reviewPool = questions.filter(q => answers[q.id] !== undefined && answers[q.id] !== q.answer)
   const activePool = mode === 'review' ? reviewPool : pool
@@ -35,14 +38,14 @@ function App() {
   const correctCount = Object.entries(answers).filter(([id, value]) => questions.find(q => q.id === Number(id))?.answer === value).length
   const score = solvedCount ? Math.round((correctCount / solvedCount) * 100) : 0
 
-  const start = (nextMode: 'quiz' | 'review', nextCategory = category) => { setCategory(nextCategory as Category); setMode(nextMode); setIndex(0); setSelected(null) }
+  const start = (nextMode: 'quiz' | 'review', nextCategory = category) => { setCategory(nextCategory as Category); setMode(nextMode); setIndex(0); setSelected(null); setShowResults(false); setSessionStats(null) }
   const choose = (choice: number) => { if (selected !== null || !current) return; const next = { ...answers, [current.id]: choice }; setAnswers(next); localStorage.setItem('hermes-quiz-answers', JSON.stringify(next)); setSelected(choice) }
-  const next = () => { if (index < activePool.length - 1) { setIndex(index + 1); setSelected(null) } else setMode('dashboard') }
+  const next = () => { if (index < activePool.length - 1) { setIndex(index + 1); setSelected(null) } else { const total = activePool.length; const correct = activePool.filter(q => answers[q.id] === q.answer || (q.id === current?.id && selected === q.answer)).length; setSessionStats({ correct, total }); setShowResults(true) } }
 
   return <div className="app-shell">
     <header className="topbar"><button className="brand" onClick={() => setMode('dashboard')}><span className="brand-mark">✦</span><span>Hermes<span className="brand-dim">/</span>Quiz</span></button><nav><button className={mode === 'dashboard' ? 'active' : ''} onClick={() => setMode('dashboard')}>ダッシュボード</button><button onClick={() => start('quiz')}>問題を解く</button><button onClick={() => start('review')}>復習 <span className="nav-badge">{reviewPool.length}</span></button></nav><a className="docs-link" href="https://hermes-agent.nousresearch.com/docs/" target="_blank" rel="noreferrer">公式ドキュメント ↗</a></header>
     <main>
-      {mode === 'dashboard' ? <>
+      {showResults && sessionStats ? <section className="results-view"><p className="eyebrow">SESSION COMPLETE</p><h1>今回の結果</h1><div className="result-score"><strong>{Math.round((sessionStats.correct / sessionStats.total) * 100)}<small>%</small></strong><span>{sessionStats.total}問中 {sessionStats.correct}問正解</span></div><p className="result-message">解説を振り返りながら、次の一歩へ進みましょう。</p><div className="result-actions"><button className="primary" onClick={() => start('quiz')}>もう一度挑戦 →</button><button className="secondary" onClick={() => { setShowResults(false); setMode('dashboard') }}>ダッシュボードへ</button></div><div className="result-breakdown"><div className="section-head"><div><p className="eyebrow">UNDERSTANDING MAP</p><h2>カテゴリ別の理解度</h2></div></div><div className="understanding-list">{categories.slice(1).map(item => { const qs = questions.filter(q => q.category === item && answers[q.id] !== undefined); const correct = qs.filter(q => answers[q.id] === q.answer).length; const percent = qs.length ? Math.round(correct / qs.length * 100) : 0; return <div className="understanding-row" key={item}><span>{item}</span><div className="progress"><i style={{ width: `${percent}%` }} /></div><strong>{qs.length ? `${percent}%` : '未回答'}</strong></div> })}</div></div></section> : mode === 'dashboard' ? <>
         <section className="hero"><div><p className="eyebrow">HERMES AGENT MASTERY</p><h1>使いこなすための、<br /><em>理解度チェック。</em></h1><p className="hero-copy">Hermes Agentの仕組みをクイズで学び、解説で理解を深める。<br />あなたのペースで、確実にスキルを積み上げよう。</p><button className="primary large" onClick={() => start('quiz')}>クイズを始める <span>→</span></button></div><div className="hero-orbit"><div className="orbit orbit-1" /><div className="orbit orbit-2" /><div className="core">✦</div><span className="orbit-label label-top">TOOLS</span><span className="orbit-label label-right">MEMORY</span><span className="orbit-label label-bottom">AGENCY</span><span className="orbit-label label-left">SKILLS</span></div></section>
         <section className="stats"><div><strong>{questions.length}</strong><span>全問題</span></div><div><strong>{solvedCount}</strong><span>回答済み</span></div><div><strong>{score}<small>%</small></strong><span>正答率</span></div><div><strong>{reviewPool.length}</strong><span>要復習</span></div></section>
         <section className="section-head"><div><p className="eyebrow">LEARNING PATH</p><h2>カテゴリから学ぶ</h2></div><span className="section-note">全{questions.length}問を収録</span></section>

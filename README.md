@@ -29,7 +29,7 @@ npm run preview
 `vite.config.ts` はリポジトリ名 `hermes-agent-quiz` をベースパスとして設定しています。
 GitHubへpush後、GitHub Actionsで `dist` をビルドし、Pagesへ公開できます。
 
-GitHub側で **Settings → Pages → Source: GitHub Actions** を選択してください。
+GitHub側で **Settings → Pages → Source: GitHub Actions** を選択してください。リポジトリへのpushで `.github/workflows/deploy.yml` が実行されます。公開URLは `https://tomu-ai963.github.io/hermes-agent-quiz/` です。
 
 ## デプロイ先について
 

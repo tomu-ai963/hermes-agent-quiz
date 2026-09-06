@@ -7,18 +7,20 @@ import './history.css'
 import './mock.css'
 import './weak.css'
 import './result.css'
+import './history-improved.css'
 
-type HistoryEntry = { date: string; correct: number; total: number; category: Category }
+type HistoryEntry = { date: string; correct: number; total: number; category: Category; mode?: QuizMode }
 type QuizMode = 'practice' | 'mock' | 'review' | 'weak'
 const HISTORY_KEY = 'hermes-quiz-history'
 const readHistory = (): HistoryEntry[] => JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')
 const formatHistoryDate = (date: string) => new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric' }).format(new Date(date))
 const scoreOf = (entry: HistoryEntry) => entry.total ? Math.round(entry.correct / entry.total * 100) : 0
+const modeLabel = (mode?: QuizMode) => mode === 'mock' ? '模擬試験' : mode === 'weak' ? '苦手問題' : mode === 'review' ? '復習' : '練習'
 const recordHistory = (entry: HistoryEntry) => { const next = [entry, ...readHistory()].slice(0, 12); localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); return next }
 
 function HistoryPanel({ history }: { history: HistoryEntry[] }) {
-  const recent = history.slice(0, 7).reverse(); const max = Math.max(...recent.map(scoreOf), 100)
-  return <section className="history-panel"><div className="section-head"><div><p className="eyebrow">LEARNING LOG</p><h2>学習履歴</h2></div><span className="section-note">直近{history.length}回</span></div>{history.length ? <><div className="history-chart">{recent.map(e => <div className="chart-column" key={e.date}><span style={{ height: `${Math.max(scoreOf(e), 5) / max * 100}%` }} title={`${scoreOf(e)}%`} /><small>{formatHistoryDate(e.date)}</small></div>)}</div><div className="history-list">{history.slice(0, 5).map(e => <div className="history-item" key={`${e.date}-${e.category}`}><span>{formatHistoryDate(e.date)} · {e.category}</span><strong>{scoreOf(e)}%</strong><small>{e.correct}/{e.total}問</small></div>)}</div></> : <p className="history-empty">クイズを完了すると、ここに学習履歴が表示されます。</p>}</section>
+  const recent = history.slice(0, 7).reverse(); const max = Math.max(...recent.map(scoreOf), 100); const average = history.length ? Math.round(history.reduce((sum, entry) => sum + scoreOf(entry), 0) / history.length) : 0; const best = history.length ? Math.max(...history.map(scoreOf)) : 0; const totalAnswered = history.reduce((sum, entry) => sum + entry.total, 0)
+  return <section className="history-panel"><div className="section-head"><div><p className="eyebrow">LEARNING LOG</p><h2>学習履歴</h2></div><span className="section-note">直近{history.length}回</span></div>{history.length ? <><div className="history-summary"><div><strong>{average}%</strong><span>平均正答率</span></div><div><strong>{best}%</strong><span>最高正答率</span></div><div><strong>{totalAnswered}</strong><span>累計回答</span></div></div><div className="history-chart">{recent.map(e => <div className="chart-column" key={e.date}><span style={{ height: `${Math.max(scoreOf(e), 5) / max * 100}%` }} title={`${scoreOf(e)}%`} /><small>{formatHistoryDate(e.date)}</small></div>)}</div><div className="history-list">{history.slice(0, 8).map(e => <div className="history-item" key={`${e.date}-${e.category}`}><span><b className={`history-mode mode-${e.mode ?? 'practice'}`}>{modeLabel(e.mode)}</b>{formatHistoryDate(e.date)} · {e.category}</span><strong>{scoreOf(e)}%</strong><small>{e.correct}/{e.total}問</small></div>)}</div></> : <p className="history-empty">クイズを完了すると、ここに学習履歴が表示されます。</p>}</section>
 }
 function shuffleQuestions(items: Question[]) {
   return [...items].sort(() => Math.random() - 0.5)
@@ -31,7 +33,7 @@ function App() {
   const reviewPool = questionBank.filter(q => answers[q.id] !== undefined && answers[q.id] !== q.answer); const weakPool = questionBank.filter(q => answers[q.id] !== undefined && answers[q.id] !== q.answer); const activePool = quizPool; const current = activePool[index]; const solvedCount = Object.keys(answers).length; const correctCount = Object.entries(answers).filter(([id, value]) => questionBank.find(q => q.id === Number(id))?.answer === value).length; const score = solvedCount ? Math.round(correctCount / solvedCount * 100) : 0
   const start = (nextMode: 'quiz' | 'review', nextCategory = category, requestedQuizMode: QuizMode = nextMode === 'review' ? 'review' : 'practice') => { const source = requestedQuizMode === 'weak' ? weakPool : nextMode === 'review' ? reviewPool : getQuestionsByCategory(nextCategory as Category); const nextPool = requestedQuizMode === 'mock' ? shuffleQuestions(source).slice(0, 10) : shuffleQuestions(source); setCategory(nextCategory as Category); setMode(nextMode); setQuizMode(requestedQuizMode); setQuizPool(nextPool); setIndex(0); setSelected(null); setShowResults(false); setSessionStats(null) }
   const choose = (choice: number) => { if (selected !== null || !current) return; const next = { ...answers, [current.id]: choice }; setAnswers(next); localStorage.setItem('hermes-quiz-answers', JSON.stringify(next)); setSelected(choice) }
-  const next = () => { if (index < activePool.length - 1) { setIndex(index + 1); setSelected(null) } else { const total = activePool.length; const correct = activePool.filter(q => answers[q.id] === q.answer || (q.id === current?.id && selected === q.answer)).length; setSessionStats({ correct, total }); setHistory(recordHistory({ date: new Date().toISOString(), correct, total, category: mode === 'review' ? 'すべて' : category })); setShowResults(true) } }
+  const next = () => { if (index < activePool.length - 1) { setIndex(index + 1); setSelected(null) } else { const total = activePool.length; const correct = activePool.filter(q => answers[q.id] === q.answer || (q.id === current?.id && selected === q.answer)).length; setSessionStats({ correct, total }); setHistory(recordHistory({ date: new Date().toISOString(), correct, total, category: mode === 'review' ? 'すべて' : category, mode: quizMode })); setShowResults(true) } }
   const missedQuestions = sessionStats ? activePool.filter(q => answers[q.id] !== q.answer && !(q.id === current?.id && selected === q.answer)) : []
   const sessionPercent = sessionStats ? Math.round(sessionStats.correct / sessionStats.total * 100) : 0
   const sessionCategories = sessionStats ? categories.slice(1).map(item => { const qs = activePool.filter(q => q.category === item); const hit = qs.filter(q => answers[q.id] === q.answer || (q.id === current?.id && selected === q.answer)).length; return { item, total: qs.length, percent: qs.length ? Math.round(hit / qs.length * 100) : null } }).filter(x => x.total) : []

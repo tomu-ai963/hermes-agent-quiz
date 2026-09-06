@@ -1,0 +1,62 @@
+export type Category = 'すべて' | '基礎' | 'CLI' | '設定' | 'ツールセット' | 'Skills' | 'Memory' | 'Profiles' | 'Cron' | 'Gateway' | 'MCP' | '安全性' | 'Windows'
+
+export type Question = {
+  id: number
+  category: Exclude<Category, 'すべて'>
+  level: string
+  question: string
+  choices: string[]
+  answer: number
+  explanation: string
+  tip: string
+  docsUrl: string
+  docsLabel: string
+}
+
+export const categories: Category[] = ['すべて', '基礎', 'CLI', '設定', 'ツールセット', 'Skills', 'Memory', 'Profiles', 'Cron', 'Gateway', 'MCP', '安全性', 'Windows']
+
+const docsByCategory: Record<Exclude<Category, 'すべて'>, { url: string; label: string }> = {
+  '基礎': { url: 'https://hermes-agent.nousresearch.com/docs/', label: 'Hermes Agent ドキュメント' },
+  'CLI': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/cli', label: 'CLI Interface' },
+  '設定': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/configuration', label: 'Configuration' },
+  'ツールセット': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/tools', label: 'Tools & Toolsets' },
+  'Skills': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/skills', label: 'Skills System' },
+  'Memory': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/memory', label: 'Persistent Memory' },
+  'Profiles': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/profiles', label: 'Profiles' },
+  'Cron': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/cron', label: 'Scheduled Tasks (Cron)' },
+  'Gateway': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/messaging', label: 'Messaging Gateway' },
+  'MCP': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp', label: 'MCP' },
+  '安全性': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/security', label: 'Security' },
+  'Windows': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/windows-native', label: 'Windows Native Guide' },
+}
+
+const questionItems: Omit<Question, 'docsUrl' | 'docsLabel'>[] = [
+  { id: 1, category: '基礎', level: '初級', question: 'Hermes Agentを引数なしで起動したときの既定の動作は？', choices: ['設定ウィザードを起動する', '対話型チャットを開始する', 'GitHub Pagesへデプロイする', '最新バージョンへ更新する'], answer: 1, explanation: 'Hermesのサブコマンドを省略すると、既定で対話型のchatとして起動します。単発の質問には hermes chat -q を使えます。', tip: 'まずは「hermes --help」と「hermes doctor」を習慣にしましょう。' },
+  { id: 2, category: '設定', level: '初級', question: 'Hermes Agentのメイン設定ファイルとして正しいものは？', choices: ['~/.hermes/config.yaml', '~/.hermes/settings.json', '/etc/hermes.ini', '~/hermes.config'], answer: 0, explanation: '基本設定は ~/.hermes/config.yaml に保存されます。APIキーなどの秘密情報は ~/.hermes/.env に分けて管理します。', tip: '設定変更後に反映されない場合は、CLIを再起動してください。' },
+  { id: 3, category: 'ツールセット', level: '中級', question: 'スキルを追加した後、現在の会話に反映させる方法は？', choices: ['ブラウザを更新するだけ', '/reset または新しいセッションを開始する', '必ずPCを再起動する', 'GitHubへpushする'], answer: 1, explanation: 'ツールやスキルの構成はセッション開始時に読み込まれます。/resetで新しいセッションを開始すると変更が反映されます。', tip: 'スキルの詳細は hermes skills list、読み込みは /skill name で確認できます。' },
+  { id: 4, category: 'ツールセット', level: '中級', question: '再利用可能な手順をHermesに覚えさせる仕組みは？', choices: ['Skills（スキル）', 'Cronだけ', 'Profilesだけ', 'Gatewayログ'], answer: 0, explanation: 'Skillsは、複雑な作業で得た手順や知識をSKILL.mdとして保存し、将来のセッションで再利用するための仕組みです。', tip: '一度きりのメモではなく、条件・手順・検証方法まで書くと強いスキルになります。' },
+  { id: 5, category: 'Cron', level: '中級', question: '定期実行タスクを登録する機能は？', choices: ['Profiles', 'Cron jobs', 'MCP', 'Checkpoints'], answer: 1, explanation: 'Cron jobsは「30m」「every 2h」「0 9 * * *」などのスケジュールでエージェントタスクを定期実行します。', tip: 'cronの実行結果をどこへ届けるか（delivery）も設計しましょう。' },
+  { id: 6, category: '安全性', level: '中級', question: 'APIキーらしい文字列をツール出力から隠す設定は？', choices: ['approvals.mode', 'privacy.redact_pii', 'security.redact_secrets', 'display.show_cost'], answer: 2, explanation: 'security.redact_secrets はAPIキー・トークンなどの秘密らしい文字列をツール出力やログから redact する設定です。通常は有効のままにします。', tip: '秘密情報の秘匿と、ユーザーIDなどのPII秘匿は別設定です。' },
+  { id: 7, category: '設定', level: '上級', question: '複数の独立したHermes環境を運用したいときに使う機能は？', choices: ['Profiles', 'Skills', 'Sessions export', 'Voice mode'], answer: 0, explanation: 'Profilesは設定・セッション・スキル・メモリを分離した複数のHermes環境を作る機能です。用途ごとの安全な分離に役立ちます。', tip: 'hermes profile create NAME と profile use NAME で管理できます。' },
+  { id: 8, category: '安全性', level: '上級', question: 'コマンド実行の承認を安全寄りに自動化するモードは？', choices: ['manual', 'smart', 'off', 'yolo'], answer: 1, explanation: 'approvals.mode: smart は低リスクのコマンドを補助モデルで承認し、高リスク操作ではユーザーに確認します。offは全承認を省略するため注意が必要です。', tip: 'YOLOは便利ですが、通常の開発ではmanualまたはsmartが推奨です。' },
+  { id: 9, category: '基礎', level: '初級', question: 'Hermes Agentの状態・設定をまとめて保存するディレクトリは？', choices: ['~/.hermes/', '~/Documents/hermes/', '/etc/hermes/', './hermes-data/'], answer: 0, explanation: 'Hermesの設定、認証、メモリ、スキル、セッション、ログなどは基本的に ~/.hermes/ 配下に保存されます。', tip: '環境変数 HERMES_HOME を使う構成では、実際の保存先が切り替わります。' },
+  { id: 10, category: '設定', level: '中級', question: 'APIキーや秘密情報を保存するファイルは？', choices: ['config.yaml', '.env', 'SOUL.md', 'jobs.json'], answer: 1, explanation: 'APIキーなどの秘密情報は ~/.hermes/.env に保存します。config.yamlにはモデルやツールなどの設定を記述します。', tip: '秘密情報はGitリポジトリへコミットしないようにしましょう。' },
+  { id: 11, category: 'ツールセット', level: '中級', question: '外部MCPサーバーのツールをHermesに接続する機能は？', choices: ['MCP integration', 'Profiles', 'Insights', 'Checkpoints'], answer: 0, explanation: 'MCP Integrationを使うと、MCPサーバーが提供する外部ツールをHermesのツールとして発見・利用できます。', tip: '接続後は hermes mcp list や hermes mcp test NAME で状態を確認できます。' },
+  { id: 12, category: 'Profiles', level: '中級', question: '複数のHermesプロセスを別々の状態で動かすときに重要な考え方は？', choices: ['同じプロファイルを共有する', 'それぞれ専用のProfileを使う', '全てのログを削除する', '毎回モデルを変更する'], answer: 1, explanation: '複数のエージェントを同時に動かす場合は、各プロセスに専用Profileを割り当てると、設定・メモリ・セッションなどの状態が混ざりません。', tip: '同じHermes homeを複数プロセスで共有しないのが安全です。' },
+  { id: 13, category: 'ツールセット', level: '中級', question: 'ツールを論理的なグループとして有効化・無効化する単位は？', choices: ['Toolset', 'Profile', 'Session', 'Provider'], answer: 0, explanation: 'Hermesのツールはweb、terminal、file、browser、skillsなどのToolset（ツールセット）に整理されています。toolset単位で利用範囲を管理できます。', tip: '必要なものだけを有効にすると、操作範囲とプロンプトの複雑さを抑えられます。' },
+  { id: 14, category: 'ツールセット', level: '上級', question: 'スキルがトークンを節約しながら必要な知識を提供する設計は？', choices: ['Progressive disclosure', 'Always-on execution', 'Full reset', 'Static routing'], answer: 0, explanation: 'Skillsは必要なときにロードするオンデマンドの知識ドキュメントです。Progressive disclosure（段階的開示）により、常に全内容をプロンプトへ詰め込みません。', tip: 'スキルの説明を短く保ち、詳細は必要な場面で参照させると効果的です。' },
+  { id: 15, category: 'Gateway', level: '中級', question: 'Gatewayが担当する役割として最も適切なものは？', choices: ['複数のメッセージング平台を接続し、セッションとCronを扱う', '画像だけを生成する', 'TypeScriptをコンパイルする', 'APIキーを発行する'], answer: 0, explanation: 'GatewayはTelegram、Discord、Slackなどのプラットフォームを1つのバックグラウンドプロセスで接続し、チャットごとのセッションやCron実行も扱います。', tip: 'プラットフォームごとのアダプターとセッションルーティングを分けて考えましょう。' },
+  { id: 16, category: '安全性', level: '上級', question: 'Hermesの危険なシェルコマンド承認で、通常推奨されるバランス型のモードは？', choices: ['smart', 'off', 'yolo', 'ignore'], answer: 0, explanation: 'smartは低リスク操作を補助モデルで処理し、高リスク操作では確認を求めるバランス型です。完全に承認を無効化するoffやYOLOより安全です。', tip: 'Cronや単発実行では人が承認できない場合のポリシーも別途確認しましょう。' },
+  { id: 17, category: 'Cron', level: '中級', question: 'Cronジョブにスキルを付与すると何ができる？', choices: ['実行時に指定スキルをロードできる', 'PCの電源を物理的に入れられる', '全ての承認を自動で無効化できる', 'GitHubリポジトリを必ず削除できる'], answer: 0, explanation: 'Cronジョブには1つ以上のスキルを紐づけられます。定期レポートなど、毎回同じ専門手順を必要とするタスクに便利です。', tip: '無人実行では、プロンプトを自己完結させ、危険な操作の扱いも明示しましょう。' },
+  { id: 18, category: 'Memory', level: '中級', question: 'Hermesのメモリが通常システムプロンプトへ読み込まれるタイミングは？', choices: ['セッション開始時', 'キーボード入力のたび', '毎秒自動更新', 'Git pushの直後'], answer: 0, explanation: 'MEMORY.mdとUSER.mdはセッション開始時に読み込まれ、システムプロンプトへスナップショットとして注入されます。途中で変更しても現在のプロンプトは即時には変わりません。', tip: 'メモリを更新した後は、新しいセッションで反映を確認します。' },
+  { id: 19, category: 'CLI', level: '初級', question: '対話せずに1回だけ質問を実行するCLI形式は？', choices: ['hermes chat -q "質問"', 'hermes setup -q "質問"', 'hermes tools -q "質問"', 'hermes gateway -q "質問"'], answer: 0, explanation: 'hermes chat -q は単発のクエリを非対話で実行するモードです。自動化やスクリプトから使うときに便利です。', tip: '長いプロンプトは --query-file でファイルや標準入力から渡せます。' },
+  { id: 20, category: 'CLI', level: '中級', question: '直前のセッションを再開する代表的なオプションは？', choices: ['--continue', '--reinstall', '--clean', '--publish'], answer: 0, explanation: '--continue（短縮形 -c）は、直近のセッションを再開します。特定セッションには --resume を使います。', tip: '作業を続けたいときに新規セッションを作らず、会話の文脈を維持できます。' },
+  { id: 21, category: 'Skills', level: '初級', question: 'インストール済みSkillを会話中に呼び出す方法は？', choices: ['/skill-name のようなスラッシュコマンド', '必ずconfig.yamlを削除する', 'GitHub Pagesを再デプロイする', '毎回Pythonで再実装する'], answer: 0, explanation: 'インストール済みSkillはスラッシュコマンドとして利用できます。Skill名を指定すると、必要な知識や手順が会話に読み込まれます。', tip: '複数Skillを組み合わせる場合は、先頭に複数のスラッシュコマンドを並べられます。' },
+  { id: 22, category: 'Skills', level: '中級', question: 'Skillの標準的な保存場所は？', choices: ['~/.hermes/skills/', '~/.hermes/passwords/', '/etc/cron-only/', './node_modules/hermes/'], answer: 0, explanation: 'Skillsは ~/.hermes/skills/ が主な保存場所です。Bundled、Hubインストール、エージェント作成のSkillもこのディレクトリで管理されます。', tip: 'Profileを使う場合は、アクティブなHERMES_HOME配下のskillsを確認します。' },
+  { id: 23, category: 'Windows', level: '初級', question: 'Windowsネイティブ環境でのHermesインストールに使える方法は？', choices: ['PowerShellで公式install.ps1を実行する', '必ずWSL2だけを使う', 'ブラウザ拡張を入れる', 'GitHub Pagesからexeを生成する'], answer: 0, explanation: 'HermesはWindows 10/11でネイティブ動作できます。公式のPowerShellインストーラーがあり、WSL2は別の選択肢です。', tip: 'インストール後は新しいターミナルを開いてPATHの変更を反映します。' },
+  { id: 24, category: 'Windows', level: '中級', question: 'WindowsでHermesの設定やデータを扱うときに意識する環境変数は？', choices: ['HERMES_HOME', 'HERMES_THEME_ONLY', 'PAGES_BRANCH', 'VITE_PUBLIC_PATH'], answer: 0, explanation: 'HERMES_HOMEはHermesの設定・メモリ・セッションなどの保存先を切り替える境界になります。Profile運用でも重要です。', tip: '別Profileのデータを混ぜないため、実際のHERMES_HOMEを確認しましょう。' },
+  { id: 25, category: 'MCP', level: '中級', question: 'MCPサーバーの主な役割は？', choices: ['Hermesの外部にあるツールを接続する', 'HermesのCSSだけを変更する', 'Gitのコミットを自動削除する', '必ずモデルを学習する'], answer: 0, explanation: 'MCPは外部ツールサーバーへ接続するためのプロトコルです。GitHub、DB、ファイルシステム、内部APIなどの既存ツールをHermesから利用できます。', tip: '必要なサーバーだけを接続し、公開するツールを絞り込むのが安全です。' },
+  { id: 26, category: 'MCP', level: '上級', question: 'MCPサーバー追加後、Hermesがツールを使えるようになるまでの基本的な流れは？', choices: ['設定してHermesを起動し、自動検出されたツールを使う', '必ずモデルを再学習する', 'ブラウザのCookieを削除する', 'GitHub Pagesにpushする'], answer: 0, explanation: 'MCPサーバーを設定すると、Hermes起動時にツールを発見・登録し、通常のツールと同じように利用できます。', tip: 'MCPはstdioとHTTPのサーバーに対応し、サーバー単位のツールフィルタリングもできます。' },
+]
+
+export const questionBank: Question[] = questionItems.map(q => ({ ...q, docsUrl: docsByCategory[q.category].url, docsLabel: docsByCategory[q.category].label }))

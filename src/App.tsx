@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 import './results.css'
+import './docs.css'
 
 type Category = 'すべて' | '基礎' | 'CLI' | '設定' | 'ツールセット' | 'Skills' | 'Memory' | 'Profiles' | 'Cron' | 'Gateway' | 'MCP' | '安全性' | 'Windows'
-type Question = { id: number; category: Exclude<Category, 'すべて'>; level: string; question: string; choices: string[]; answer: number; explanation: string; tip: string }
+type Question = { id: number; category: Exclude<Category, 'すべて'>; level: string; question: string; choices: string[]; answer: number; explanation: string; tip: string; docsUrl?: string; docsLabel?: string }
 
 const questions: Question[] = [
   { id: 1, category: '基礎', level: '初級', question: 'Hermes Agentを引数なしで起動したときの既定の動作は？', choices: ['設定ウィザードを起動する', '対話型チャットを開始する', 'GitHub Pagesへデプロイする', '最新バージョンへ更新する'], answer: 1, explanation: 'Hermesのサブコマンドを省略すると、既定で対話型のchatとして起動します。単発の質問には hermes chat -q を使えます。', tip: 'まずは「hermes --help」と「hermes doctor」を習慣にしましょう。' },
@@ -34,7 +35,34 @@ const questions: Question[] = [
   { id: 26, category: 'MCP', level: '上級', question: 'MCPサーバー追加後、Hermesがツールを使えるようになるまでの基本的な流れは？', choices: ['設定してHermesを起動し、自動検出されたツールを使う', '必ずモデルを再学習する', 'ブラウザのCookieを削除する', 'GitHub Pagesにpushする'], answer: 0, explanation: 'MCPサーバーを設定すると、Hermes起動時にツールを発見・登録し、通常のツールと同じように利用できます。', tip: 'MCPはstdioとHTTPのサーバーに対応し、サーバー単位のツールフィルタリングもできます。' },
 ]
 
+const docsByCategory: Record<Exclude<Category, 'すべて'>, { url: string; label: string }> = {
+  '基礎': { url: 'https://hermes-agent.nousresearch.com/docs/', label: 'Hermes Agent ドキュメント' },
+  'CLI': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/cli', label: 'CLI Interface' },
+  '設定': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/configuration', label: 'Configuration' },
+  'ツールセット': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/tools', label: 'Tools & Toolsets' },
+  'Skills': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/skills', label: 'Skills System' },
+  'Memory': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/memory', label: 'Persistent Memory' },
+  'Profiles': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/profiles', label: 'Profiles' },
+  'Cron': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/cron', label: 'Scheduled Tasks (Cron)' },
+  'Gateway': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/messaging', label: 'Messaging Gateway' },
+  'MCP': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp', label: 'MCP' },
+  '安全性': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/security', label: 'Security' },
+  'Windows': { url: 'https://hermes-agent.nousresearch.com/docs/user-guide/windows-native', label: 'Windows Native Guide' },
+}
+
 const categories: Category[] = ['すべて', '基礎', 'CLI', '設定', 'ツールセット', 'Skills', 'Memory', 'Profiles', 'Cron', 'Gateway', 'MCP', '安全性', 'Windows']
+
+const enrichedQuestions: Question[] = questions.map((question) => ({
+  ...question,
+  docsUrl: docsByCategory[question.category].url,
+  docsLabel: docsByCategory[question.category].label,
+}))
+
+const questionBank = enrichedQuestions
+
+function getQuestionsByCategory(category: Category) {
+  return questionBank.filter(q => category === 'すべて' || q.category === category)
+}
 
 function App() {
   const [category, setCategory] = useState<Category>('すべて')
@@ -44,7 +72,7 @@ function App() {
   const [showResults, setShowResults] = useState(false)
   const [answers, setAnswers] = useState<Record<number, number>>(() => JSON.parse(localStorage.getItem('hermes-quiz-answers') ?? '{}'))
   const [sessionStats, setSessionStats] = useState<{ correct: number; total: number } | null>(null)
-  const pool = useMemo(() => questions.filter(q => category === 'すべて' || q.category === category), [category])
+  const pool = useMemo(() => getQuestionsByCategory(category), [category])
   const reviewPool = questions.filter(q => answers[q.id] !== undefined && answers[q.id] !== q.answer)
   const activePool = mode === 'review' ? reviewPool : pool
   const current = activePool[index]
@@ -64,7 +92,7 @@ function App() {
         <section className="stats"><div><strong>{questions.length}</strong><span>全問題</span></div><div><strong>{solvedCount}</strong><span>回答済み</span></div><div><strong>{score}<small>%</small></strong><span>正答率</span></div><div><strong>{reviewPool.length}</strong><span>要復習</span></div></section>
         <section className="section-head"><div><p className="eyebrow">LEARNING PATH</p><h2>カテゴリから学ぶ</h2></div><span className="section-note">全{questions.length}問を収録</span></section>
         <section className="category-grid">{categories.slice(1).map((item, i) => { const count = questions.filter(q => q.category === item).length; return <button className="category-card" key={item} onClick={() => start('quiz', item)}><span className={`category-icon icon-${i % 5}`}>{['◈', '⌘', '⚙', '◌', '◉'][i % 5]}</span><span className="category-name">{item}</span><span className="category-count">{count ? `${count}問` : '準備中'} <b>→</b></span></button> })}</section>
-      </> : <section className="quiz-view"><div className="quiz-top"><button className="back" onClick={() => setMode('dashboard')}>← ダッシュボードへ</button><span>{mode === 'review' ? '間違えた問題を復習' : category === 'すべて' ? 'すべての問題' : category}</span></div>{current ? <><div className="progress-row"><span>QUESTION {String(index + 1).padStart(2, '0')} / {String(activePool.length).padStart(2, '0')}</span><div className="progress"><i style={{ width: `${((index + (selected !== null ? 1 : 0)) / activePool.length) * 100}%` }} /></div></div><div className="question-card"><div className="question-meta"><span className="pill">{current.category}</span><span className="level">{current.level}</span></div><h2>{current.question}</h2><div className="choices">{current.choices.map((choice, i) => <button key={choice} disabled={selected !== null} className={`choice ${selected !== null ? i === current.answer ? 'correct' : i === selected ? 'wrong' : '' : ''}`} onClick={() => choose(i)}><span className="choice-key">{String.fromCharCode(65 + i)}</span>{choice}{selected !== null && i === current.answer && <span className="result">✓</span>}{selected !== null && i === selected && i !== current.answer && <span className="result">×</span>}</button>)}</div>{selected !== null && <div className={`explanation ${selected === current.answer ? 'success' : 'warning'}`}><div className="explanation-title">{selected === current.answer ? '✓ 正解です' : '✦ 惜しい！正解は「' + current.choices[current.answer] + '」'}</div><p>{current.explanation}</p><div className="tip">TIP　{current.tip}</div></div>}</div>{selected !== null && <button className="primary next" onClick={next}>{index === activePool.length - 1 ? '結果を見る' : '次の問題へ'} →</button>}</> : <div className="empty"><span>✦</span><h2>復習する問題はありません</h2><p>すべての問題に挑戦すると、間違えた問題がここに表示されます。</p><button className="primary" onClick={() => start('quiz')}>問題を解く</button></div>}</section>}
+      </> : <section className="quiz-view"><div className="quiz-top"><button className="back" onClick={() => setMode('dashboard')}>← ダッシュボードへ</button><span>{mode === 'review' ? '間違えた問題を復習' : category === 'すべて' ? 'すべての問題' : category}</span></div>{current ? <><div className="progress-row"><span>QUESTION {String(index + 1).padStart(2, '0')} / {String(activePool.length).padStart(2, '0')}</span><div className="progress"><i style={{ width: `${((index + (selected !== null ? 1 : 0)) / activePool.length) * 100}%` }} /></div></div><div className="question-card"><div className="question-meta"><span className="pill">{current.category}</span><span className="level">{current.level}</span></div><h2>{current.question}</h2><div className="choices">{current.choices.map((choice, i) => <button key={choice} disabled={selected !== null} className={`choice ${selected !== null ? i === current.answer ? 'correct' : i === selected ? 'wrong' : '' : ''}`} onClick={() => choose(i)}><span className="choice-key">{String.fromCharCode(65 + i)}</span>{choice}{selected !== null && i === current.answer && <span className="result">✓</span>}{selected !== null && i === selected && i !== current.answer && <span className="result">×</span>}</button>)}</div>{selected !== null && <div className={`explanation ${selected === current.answer ? 'success' : 'warning'}`}><div className="explanation-title">{selected === current.answer ? '✓ 正解です' : '✦ 惜しい！正解は「' + current.choices[current.answer] + '」'}</div><p>{current.explanation}</p><div className="tip">TIP　{current.tip}</div>{current.docsUrl && <a className="docs-cta" href={current.docsUrl} target="_blank" rel="noreferrer">公式ドキュメントで詳しく読む <span>↗</span><small>{current.docsLabel}</small></a>}</div>}</div>{selected !== null && <button className="primary next" onClick={next}>{index === activePool.length - 1 ? '結果を見る' : '次の問題へ'} →</button>}</> : <div className="empty"><span>✦</span><h2>復習する問題はありません</h2><p>すべての問題に挑戦すると、間違えた問題がここに表示されます。</p><button className="primary" onClick={() => start('quiz')}>問題を解く</button></div>}</section>}
     </main><footer><span>Hermes/Quiz</span><span>Learn. Practice. Master.</span></footer>
   </div>
 }
